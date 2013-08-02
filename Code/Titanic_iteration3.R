@@ -1,0 +1,233 @@
+# -----------------------
+# Setting 
+library(tree)
+require(maptree)
+library(randomForest)
+setwd("/Users/aszostek/Projects/Kaggle/Titanic")
+iteration = 3
+
+# -----------------------
+# Read Data
+train.org <- read.csv(file="./Data/train.csv")
+test.org <- read.csv(file="./Data/test.csv")
+
+
+# -----------------------
+# Data transoformations and feature creation
+
+# Function to get the title of the passanger
+title<-function(name)
+{
+  lname<-sub("^.*, ","",name)
+  lname<-sub("\\. .*$","",lname)
+  return(lname)  
+}
+
+# Function which calculates an age for a given title Mr, Miss etc
+# It uses information from both training and test set
+# This function operates on original training set and test set!
+age_title<-function()
+{
+  # take original data
+  tr1<-train.org
+  te1<-test.org
+  # add survivor column to test set
+  te1<-cbind(factor(sample(c(0,1),nrow(te1),replace=T),levels=c(0,1)),te1)
+  names(te1)[[1]]<-"survived"
+  # Combine two tables togethe
+  all<-rbind(tr1,te1)
+  # select only samples with age provided
+  all<-all[!is.na(all$age),]
+  
+  
+  # Extract only Mr, Miss. etc
+  lname<-as.character(all[[3]])
+  lname<-sub("^.*, ","",lname)
+  lname<-sub("\\. .*$","",lname)
+
+  all$title<-as.factor(lname)
+  all<-all[,c("age","title")]    
+  return(by(all[[1]],all[[2]],mean))
+}
+a<-age_title()
+
+guess.age<-function(title)
+{
+  return(age_title()[title][[1]])
+}
+
+
+data.transformation<-function(data)
+{  
+  # If embarked missing fill with most frequent option which is S
+  data[data$embarked=="","embarked"]<-"S"  
+
+  # calculate title of the passanger
+  data$title <- unlist(lapply(as.character(data$name),function(x) title(x)))
+  
+  
+  # Clean classes of each column
+  if(names(data)[[1]]=="survived") data$survived<-as.factor(data$survived)
+  data$pclass<-as.factor(data$pclass)
+  data$name<-as.character(data$name)
+  data$ticket<-as.character(data$ticket)
+  data$cabin<-as.character(data$cabin)
+  data$embarked<-as.factor(as.character(data$embarked))
+  data$title<-as.factor(as.character(data$title))
+  
+  # If it is a test set and doesn't have a survived column add one with fake data
+  # it is useful to have the same number of columns in training and test set
+  if(names(data)[[1]]!="survived") 
+  {
+    data<-cbind(factor(sample(c(0,1),nrow(data),replace=T),levels=c(0,1)),data)
+    names(data)[[1]]<-"survived"
+  }
+  
+  # Fill in missing age
+  # This function guesses age based on the title of the passange
+  
+  for(i in 1:nrow(data))
+  {
+    if (is.na(data[i,"age"]))
+      data[i,"age"]<-guess.age(data[i,"title"])
+  }
+  
+  
+  return(data[,c(-3,-8,-9,-10,-12)])    
+}
+
+train <- data.transformation(train.org)
+test <- data.transformation(test.org)
+
+# -----------------------
+# Modeling
+
+# Train classification tree on a training set
+t1<-tree(survived~.,data=train)
+plot(t1)
+text(t1)
+
+# ------------------------
+# Cross Validate
+kfold.tree<-function(data,k)
+{
+  n<-as.integer(nrow(data)/k)
+  err.vect<-rep(NA,k)
+  for (i in 1:k)
+  {
+    subset<-((i-1)*n+1):(i*n)
+    train<-data[-subset,]
+    test<-data[subset,]
+    treepred<-tree(survived~.,data=train)
+    err<-sum(test[[1]]==predict(treepred,newdata=test,type="class"))/nrow(test)    
+    err.vect[i]<-err
+  }
+  return(err.vect)
+}
+
+leavoneout.tree<-function(data)
+{
+  err.vect<-rep(NA,nrow(data))
+  for (i in 1:nrow(data))
+  {
+    train<-data[c(-i),]
+    test<-data[i,]
+    treepred<-tree(survived~.,data=train)
+    treepred<-tree(survived~.,data=train)
+    err<-sum(test[[1]]==predict(treepred,newdata=test,type="class"))/nrow(test)    
+    err.vect[i]<-err    
+  }
+  return(err.vect)
+}
+
+
+a<-kfold.tree(train,10)
+a
+mean(a)
+
+b<-leavoneout.tree(train)
+b
+mean(b)
+
+# -----------------------
+# Submission file
+
+
+submission = predict(t1,newdata=test,type="class")
+test_submission = test
+test_submission[[1]] <- submission
+
+# write file
+submission_file_name = paste("./Submissions/submission",as.character(iteration),".csv",sep="")
+submission_file_name
+
+write.csv(test_submission,file=submission_file_name,row.names=FALSE)
+
+
+# ------------------------
+# Tests
+table(train[,c("title","survived")])
+train[train$title=="Major",c("title","survived")]
+
+s<-train[!is.na(train$age) && train$title=="Mr",]
+#s<-train[train.$title=="Mr",]
+
+t<-s$fare/(s$sibsp+s$parch+1)
+t<-(s$sibsp)/s$parch
+
+plot(t,s$age,pch=19)
+
+plot(s$sibsp+s$parch+1,s$fare)
+family = s$parch+s$sibsp+1
+plot(as.numeric(s$pclass),s$fare/family)
+
+plot(s$sibsp,s$age,pch=19)
+
+
+hist(train[train$pclass==1,"fare"])
+
+hist(s$age,15)
+
+hist(as.numeric(s$pclass))
+
+fit <-lm(s$age ~ train$title,data=train)
+
+plot(fit)
+par(las=2)
+plot(train$title,train$age)
+plot()
+
+plot(as.numeric(train$title),fit$residuals,pch=19)
+
+par(mfrow=c(2,2))
+hist(as.numeric(s$pclass))
+hist(as.numeric(s[s$pclass==1,"age"]),main=mean(s[s$pclass==1,"age"],na.rm=T))
+hist(as.numeric(s[s$pclass==2,"age"]),main=mean(s[s$pclass==2,"age"],na.rm=T))
+hist(as.numeric(s[s$pclass==3,"age"]),main=mean(s[s$pclass==3,"age"],na.rm=T))
+
+par(mfrow=c(2,2))
+hist(as.numeric(s[s$pclass==1,"sibsp"]))
+hist(as.numeric(s[s$pclass==1 & s$sibsp ==0,"age"]),main=mean(s[s$pclass==1 & s$sibsp ==0,"age"],na.rm=T))
+hist(as.numeric(s[s$pclass==1 & s$sibsp == 1,"age"]),main=mean(s[s$pclass==1 & s$sibsp == 1,"age"],na.rm=T))
+hist(as.numeric(s[s$pclass==1 & s$sibsp == 2,"age"]),main=mean(s[s$pclass==1 & s$sibsp == 2,"age"],na.rm=T))
+
+
+par(mfrow=c(2,2))
+hist(as.numeric(s[s$pclass==1,"embarked"]))
+hist(as.numeric(s[s$pclass==1 & s$embarked == "S","age"]),main=mean(s[s$pclass==1 & s$embarked=="S","age"],na.rm=T))
+hist(as.numeric(s[s$pclass==1 & s$embarked=="Q","age"]),main=mean(s[s$pclass==1 & s$embarked=="Q","age"],na.rm=T))
+hist(as.numeric(s[s$pclass==1 & s$embarked=="C","age"]),main=mean(s[s$pclass==1 & s$embarked=="C","age"],na.rm=T))
+
+s<-train[!is.na(train$age) & train$title=="Mr",]
+s$fare <- log(s$fare+1)
+family = s$parch+s$sibsp+1
+fare = log(s$fare/family)
+
+fit = lm(age ~ pclass+parch+sibsp+embarked,data=s)
+summary(fit)
+par(mfrow=c(1,1))
+plot(s$age,fit$residuals,col=s$embarked)
+
+hist(log(s$fare))
+
+predict(fit,newdata=test)

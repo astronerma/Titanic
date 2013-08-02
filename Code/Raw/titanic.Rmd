@@ -1,0 +1,229 @@
+# Kaggle Titanic competittion
+========================================================
+Task: Take information about titanic passangers and try to predict which of them survived the crash.
+
+Read libraries
+```{r,message=FALSE}
+library(tree)
+require(maptree)
+library(randomForest)
+```
+
+Read the data
+```{r}
+setwd("/Users/aszostek/Projects/Kaggle/Titanic")
+train <- read.csv(file="./Data/train.csv")
+test <- read.csv(file="./Data/test.csv")
+```
+
+There are several variables in the data:
+
+- pclass - class of a passanger
+- age
+- name 
+- sex
+- sibsp - number of siblings/children on board
+- parch - number of parents/sposes on board
+- ticket
+- fare
+- cabin
+- embarked - port of embarkment (S - Southampton, ... )
+
+At first I created a function which cleans and transoforms the data. It will be applied to both training and test data.
+
+
+```{r}
+data.transformation<-function(data)
+{  
+  
+  # If embarked missing fill with most frequent option S
+  data[data$embarked=="","embarked"]<-"S"  
+  
+  # Clean classes of each column
+  if(names(data)[[1]]=="survived")
+    {
+      data$survived<-as.factor(data$survived)
+    }
+  data$pclass<-as.factor(data$pclass)
+  data$name<-as.character(data$name)
+  data$ticket<-as.character(data$ticket)
+  data$cabin<-as.character(data$cabin)
+  data$embarked<-as.factor(as.character(data$embarked))
+  
+  # If it is a test set and doesn't have a survived column add a column with some randomly assigned survival data. Some of the algorithms require this column to be present in the test set.
+  if(names(data)[[1]]!="survived") 
+  {
+    data<-cbind(factor(sample(c(0,1),nrow(data),replace=T),levels=c(0,1)),data)
+    names(data)[[1]]<-"survived"
+  }
+  
+  # Add family column which is the sum of sibsp+parch+1
+  #data$family<-as.factor(as.numeric(as.character(data$sibsp))+as.numeric(as.character(data$parch))+1)
+
+  # If age missing, relace with median value for all ages
+  data[is.na(data$age),"age"]<-median(data$age,na.rm=T)
+  
+  # If fare missing, replace with median value
+  data[is.na(data$fare),"fare"]<-median(data$fare,na.rm=T)
+
+  # Clean the ticket number column, remove all letters and dots
+  data$ticket<-sub("^.* ","",data$ticket)
+  data$ticket<-sub("LINE","0",data$ticket)
+  data$ticket<-as.numeric(data$ticket)
+  
+  
+  # Get rid of some of the columns
+  return(data[,c(-3,-8,-9,-10,-11)])  
+
+}
+
+```
+
+Apply the function to the data
+```{r}
+train_new<-data.transformation(train)
+test_new<-data.transformation(test)
+```
+
+## Classification Tree
+Lets then apply the classification tree to the dataset and see what is its accuracy:
+
+```{r}
+# train tree on a tit3 set (training set)
+t1<-tree(survived~.,data=train_new)
+t3<-prune.tree(t1,best=4)
+```
+Here is how the tree looks like
+```{r}
+plot(t1,main="Classification tree")
+text(t1,pretty=1)
+```
+From this it looks like only several variables are important for the classification: sex, pclass, age, and how many family members were present on board
+
+
+This model accuracy on training set is:
+```{r}
+a <- 1-sum(train_new[[1]]!=predict(t1,train_new,type="class"))/nrow(train_new)
+```
+
+```r a*100```% - not bad! To estimate how this model might be doing on the test set I did a k-fold cross-validation. Here is my cross-validation function
+
+```{r}
+cross.val.tree<-function(data,range,size)
+{  
+  # Parameters
+  # Range tells which rows to use for the test set
+  
+  # Define datasets
+  train<-data[-range,]
+  test<-data[range,]
+  # Train the tree on training set
+  treepred<-tree(survived~.,data=train)
+  # Prune the tree to size
+  pt1<-prune.tree(treepred,best=size)
+  # Use pruned tree on the test set
+  err<-sum(test[[1]]==predict(pt1,newdata=test,type="class"))/nrow(test)
+  return(err)
+}
+```
+
+And here is the actual k-fold cross validation
+```{r}
+k=5
+n<-as.integer(nrow(train_new)/k)
+err.vect<-rep(NA,k)
+for (i in 1:k)
+{
+  subset<-((i-1)*n+1):(i*n)
+  err.vect[i]<-cross.val.tree(train_new,subset,6)
+}
+mean(err.vect)
+```
+This predicts the accuracy of 81%, ot bad. But when I actually submitted this moel to Kaggle, the result was not so good. It was only about 77%.
+
+My best model submitted to kaggle was a unprunned classification tree with less variables than now in model. 
+
+File to submit the classification tree
+```{r}
+pred<-predict(t1,newdata=test_new,type="class")
+test_new[[1]]<-pred
+write.csv(test_new,file="/Users/aszostek/Projects/Kaggle/Titanic/Data/result_v6.csv",row.names=FALSE,quote=c(3))
+```
+
+## Random Forest
+
+How about random forest? How does it deal with the data and what is its predictive power?
+
+For a tree with 4 final nodes and 500 trees
+```{r}
+t2<-randomForest(survived~.,data=train_new,mtry=4,ntree=100)
+1-sum(train_new[[1]]!=predict(t2,train_new,type="response"))/nrow(train_new)
+```
+
+How does the accuracy depend on number of trees?
+
+```{r}
+btree<-function(x)
+{
+  y<-as.integer(x)
+  t1<-randomForest(survived~.,data=train_new,ntree=y,mtry=4)
+  return(1-sum(train_new[[1]]!=predict(t1,train_new,type="response"))/nrow(train_new))
+}
+n<-20
+x<-seq(20,800,length.out=n)
+y<-rep(NA,n)
+#for(i in 1:n) y[i]<-btree(x[i])
+#plot(x,y,xlab="number of trees",ylab="accuracy",ylim=c(0.95,1),main="Random forest")
+```
+
+wow, 99% accuracy! Lets do the cross-validation! As far as I understand, one does not need to do cross-validation with random forest, but I still want to see how it performs. A cross validation function:
+
+```{r}
+cross.val.randomForest<-function(data,range)
+{  
+  train<-data[-range,]
+  test<-data[range,]
+  treepred<-randomForest(survived~.,data=train,ntree=500,mtry=4)
+  err<-1-sum(test[[1]]!=predict(treepred,newdata=test,type="response"))/nrow(test)
+  return(err)
+}
+```
+And the actual validation:
+```{r}
+k=5
+n<-as.integer(nrow(train_new)/k)
+err.vect<-rep(NA,k)
+for (i in 1:k)
+{
+  subset<-((i-1)*n+1):(i*n)
+  err.vect[i]<-cross.val.randomForest(train_new,subset)
+}
+mean(err.vect)
+```
+83% is much lower than 99% but still high. In fact when I included my prediction in kaggle it didn't do much better than the single tree! This is weird.
+
+Save the prediction to a file and submit:
+
+```{r}
+randomForest.prediction<-predict(t2,newdata=test_new,type="response")
+test_new[[1]]<-randomForest.prediction
+write.csv(test_new,file="/Users/aszostek/Projects/Kaggle/Titanic/Data/result_v5.csv",row.names=FALSE,quote=c(3))
+```
+
+## K-nearest neighbours
+## Naive Bayes
+## Support vector machines
+## Ensemble model
+
+
+
+
+
+
+
+
+
+
+
+
+

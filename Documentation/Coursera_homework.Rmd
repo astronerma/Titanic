@@ -1,0 +1,38 @@
+Coursera homework
+========================================================
+
+#### For your selected competition, write a few sentences describing the competition problem as you interpreted it.  You want your writeup to be self-contained so your peer-reviewer does not need to go to Kaggle to study the competition description.  Clarity is more important than detail.  What's the overall goal?  What does the data look like?  How will the answers be evaluated?
+
+I am taking part in Titanic competition on Kaggle. The aim of the competition is to predict survivors of the Titanic catastrophe based on personal information about each passenger. The available data includes a name of the passenger, a class in which he/she traveled (1,2,3), sex, age, number of siblings or spouses on board, number of children or parents on board, ticket code, fare, cabin number and port of embankment (S, Q, C). Kaggle team provides a training set with 891 sample passengers and a test set with 418 passengers. The training set contains information about passenger survival and is used to train a predictive model. The test set does not have information about passengers survival. Once I have my predictive model trained, I will apply it to the test set and submit my prediction to Kaggle where my predictions will be compared with true survival information kept secret by Kaggle. Kaggle provides a feedback for each submission in the form of an accuracy score defined as a ratio of number of cases predicted correctly to number of all passengers in the test set. In my work I will use classification tree algorithm to build my predictive model.
+
+#### Write a few sentences describing how you approached the problem.  What techniques did you use? 
+
+The data provided is quite clean. In any of my analysis I will not use information about cabin number, and ticket code, as I think this information is not relevant. An age information and port of embankment for some of the passenger was missing. In a first step, I replaced the missing age with a median age for all passengers in training set and a missing port with the most frequent port for all passengers (S). 
+ 
+In my first attempt to build a predictive model I used a decision tree and training data containining variables: age, sex, class and information about children, parents, spouses, and siblings.
+
+#### Write a few sentences describing how you implemented your approach.  What languages and libraries did you use? What challenges did you run into?
+
+In my analysis I used R language and Rstudio client. For the decision tree I used a function "tree" from a library called "tree". I used the function with only default parameters. To estimate the model performance on a test set, I performed a cross validation on training set using 10-fold cross validation and a leave one out cross validation. I wrote my own scripts in R to do this. I used function "predict" to apply my trained tree to the test data which gave me a "survival" prediction for the submission. The prediction was incorporated into the test data file to adhere to a format required for submission.
+
+#### Write a few sentences assessing your approach.  Did it work?  What do you think the problems were?
+
+My first model gave me 0.805 accuracy (as defined in first question) on a training set, that means that it is able to predict ~80% of cases in training set correctly. The cross validation results were similar, 10-fold cross validation gave accuracy of 0.792 and leave one out cross validation 0.718. The test set prediction (based on the model) submitted to Kaggle resulted in an accuracy of 0.755. This is not so good. This placed me (at the time of submission) at 3202 place in leader board. This is well below a benchmark model (2223 place) in which a classification is based purely on gender, marking all women as surviving and all men as not surviving. To improve my model, I will now try to improve an age estimation instead of using a simple median value.
+
+
+#### Write a few sentences describing how you improved on your solution, and whether or not it worked.
+
+I noticed in my modeling that age is an important variable in deciding who survives and who doesn't. To improve my results I decided to calculate missing ages more precisely. First thing I did, I used name variable to extract a title of the passenger (Mr, Miss, Master etc). Median ages for each title differ significantly. I could use these title based medians as my new age estimations, but I decided to go one step further. I also noticed that "Mr" is the most frequent title and the spread of age values within the "Mr" title is very large. I noticed that an average age for "Mr" 
+is different for different classes they traveled in. Therefore, in my next step I used a regression method to estimate an age based on both passengers title and class in which they traveled (model: age ~ title + class). For the regression I used "lm" function in R. After all missing ages have been filled, I again used a decision tree to build a predictive model and submitted my predictions of test set to Kaggle. This time the accuracy was 0.79426 which put me on 159 place in leaderboard (at the time of submission).
+
+
+
+
+
+
+
+
+
+
+
+

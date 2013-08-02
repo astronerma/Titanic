@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>Titanic project</title>
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 12px;
+   margin: 8px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 { 
+   font-size:2.2em; 
+}
+
+h2 { 
+   font-size:1.8em; 
+}
+
+h3 { 
+   font-size:1.4em; 
+}
+
+h4 { 
+   font-size:1.0em; 
+}
+
+h5 { 
+   font-size:0.9em; 
+}
+
+h6 { 
+   font-size:0.8em; 
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre {	
+   margin-top: 0;
+   max-width: 95%;
+   border: 1px solid #ccc;
+   white-space: pre-wrap;
+}
+
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code.r, code.cpp {
+   background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * { 
+      background: transparent !important; 
+      color: black !important; 
+      filter:none !important; 
+      -ms-filter: none !important; 
+   }
+
+   body { 
+      font-size:12pt; 
+      max-width:100%; 
+   }
+       
+   a, a:visited { 
+      text-decoration: underline; 
+   }
+
+   hr { 
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote { 
+      padding-right: 1em; 
+      page-break-inside: avoid; 
+   }
+
+   tr, img { 
+      page-break-inside: avoid; 
+   }
+
+   img { 
+      max-width: 100% !important; 
+   }
+
+   @page :left { 
+      margin: 15mm 20mm 15mm 10mm; 
+   }
+     
+   @page :right { 
+      margin: 15mm 10mm 15mm 20mm; 
+   }
+
+   p, h2, h3 { 
+      orphans: 3; widows: 3; 
+   }
+
+   h2, h3 { 
+      page-break-after: avoid; 
+   }
+}
+
+</style>
+
+
+
+
+
+</head>
+
+<body>
+<h1>Titanic project</h1>
+
+<h3>Iteration 1  - Submitted</h3>
+
+<p>Plain vanilla classification tree
+Data transformation includes:</p>
+
+<ul>
+<li>Assigning proper classes to each column of the data</li>
+<li>Fill missing age with median value of the age column - Improve it!</li>
+<li>Use in modeling only columns: survived,sex,pclass,age,sibsp,parch</li>
+<li>Use classification tree to model the data</li>
+</ul>
+
+<p><em>10 fold cross validation score:</em> 0.7921348</p>
+
+<p><em>Leave on out cross validation:</em> 0.7182941</p>
+
+<p><em>Submission score:</em> 0.75598</p>
+
+<h3>Iteration 2 - submitted</h3>
+
+<p>Lets try some random forest</p>
+
+<ul>
+<li>Same data as above</li>
+<li>The model had parameter mtry=4, the rest was default</li>
+</ul>
+
+<p><em>10 fold cross validation score:</em> 0.8235955</p>
+
+<p><em>Leave on out cross validation:</em> 0.8226712</p>
+
+<p><em>Submission score:</em>  0.64115</p>
+
+<h3>Iteration 3 - Submitted - INCORRECT!</h3>
+
+<p>The previous models didn&#39;t do very well. Now I will play a bit more with data</p>
+
+<ul>
+<li>Use simple classification tree to do the modelling</li>
+<li>Calculate title from name</li>
+<li>Use it to guess the age</li>
+<li>Do NOT use title in modelling it gave me some strange results</li>
+<li>There is definately some improvement with respect to my first model</li>
+</ul>
+
+<p><em>10 fold cross validation score:</em> 0.788764</p>
+
+<p><em>Leave on out cross validation:</em> 0.7968575</p>
+
+<p><em>Submission score:</em> 0.76555 - same as gender model benchmark</p>
+
+<h4>Note that this submission is INCORRECT!!!! I forgot to uncomment part of the code were I calculate missing age!</h4>
+
+<p>Some of the content of the file may be incorrect with respect to submission file!</p>
+
+<h3>Iteration 4 - Submitted</h3>
+
+<p>I would like to try here something else, to apply two separate models, one for men, one for women.
+How about use random forest on each women and men separetely?</p>
+
+<ul>
+<li>Here I am doing a decission tree on each gender separately</li>
+<li>I am also prunning the tree to 4 nodes for female and 5 nodes for men</li>
+<li>The prunning was based on analysis of images created by cv.tree</li>
+<li>I am using the age guesses from Iteration 3</li>
+</ul>
+
+<p><em>10 fold cross validation score:</em> &ndash; cv.tree used</p>
+
+<p><em>Leave on out cross validation:</em> &ndash; cv.tree used </p>
+
+<p><em>Submission score:</em> 0.75598 - Not a great score, but I will leave it as is.</p>
+
+<hr/>
+
+<h3>Iteration 5</h3>
+
+<p>I will add some new data here with respect to Iteration 4</p>
+
+<ul>
+<li>Add a family column - sibsp+parch+1 - this gives an estimate of number of family members on board
+*</li>
+</ul>
+
+<hr/>
+
+<h3>Iteration 6 - Submitted</h3>
+
+<p>Same as iteration 3 but with correct age calculated! I forgot there to uncomment the part of code where I calculate age!
+So a new submission here! This is by now my best submission and it proves that age is very important!</p>
+
+<p><em>10 fold cross validation score:</em> 0.8146067</p>
+
+<p><em>4 fold cross validation minimal score:</em> 0.7792793 </p>
+
+<p><em>Leave on out cross validation:</em> 0.8237935</p>
+
+<p><em>Submission score:</em>  0.78947 - this is 439 position in leaderboard!</p>
+
+<h3>Iteration 7 - Submitted</h3>
+
+<p>The same as iteration 6 but with age even more improved. I noticed that most of the age is missing for &ldquo;Mr&rdquo; and that the average age depends on pclass. So I will build a better model of age.</p>
+
+<ul>
+<li>Now age model includes title and pclass </li>
+<li>Note: on first submission i made a mistake to including title in my data and again i got some crazy result!</li>
+</ul>
+
+<p><em>10 fold cross validation score:</em> 0.8213483</p>
+
+<p><em>Leave on out cross validation:</em> 0.8282828</p>
+
+<p><em>Submission score:</em> 0.79426 - this is 159 position in leaderboard!</p>
+
+<hr/>
+
+<h3>Iteration 8</h3>
+
+<h3>Iteration 9 - Submitted</h3>
+
+<p>The same as 7. - Classification tree</p>
+
+<ul>
+<li>Added number of family members on board calculation</li>
+</ul>
+
+<p><em>10 fold cross validation score:</em> 0.8269663</p>
+
+<p><em>Leave on out cross validation:</em> 0.8271605</p>
+
+<p><em>Submission score:</em> 0.78947 - Not an improvement! I must be overfitting.</p>
+
+<h3>Iteration 10 - Submitted</h3>
+
+<p>Same as 9 but with random forest!</p>
+
+<ul>
+<li>I use random forest code from Iteratioin 2</li>
+<li>Used 5 features and 200 trees</li>
+</ul>
+
+<p><em>Score on training set:</em> 0.93 </p>
+
+<p><em>Submission score:</em> 0.72727</p>
+
+<p>So low always from random forest!!! Why??? Thye must be overfitting a lot</p>
+
+<h3>Iteration 11 - Submitted</h3>
+
+<p>Same as 10 but with many more trees. I used </p>
+
+<ul>
+<li>used 800 tress and 4 features</li>
+</ul>
+
+<p><em>Score on training set:</em> 0.9203143 </p>
+
+<p><em>Submission score:</em> 0.75598</p>
+
+<p>Again low&hellip;. I don&#39;t understand!</p>
+
+<h3>Iteration 12  - Submitted</h3>
+
+<p>Same as 11 but changed random forest parameters. Now only three features in training! and 1000 trees</p>
+
+<ul>
+<li>Also used sampsize=400 to be comparable with the test set!</li>
+</ul>
+
+<p><em>Score on training set:</em> 0.87</p>
+
+<p><em>Submission score:</em> 0.78469</p>
+
+<h3>Iteration 13 - Submitted</h3>
+
+<p>Lets try my last submission to be with different number of max nodes for random forest</p>
+
+<ul>
+<li>Set max nodes to 4</li>
+</ul>
+
+<p>randomForest(survived~.,data=train,mtry=4,ntree = 1000,sampsize=300,maxnodes=4)</p>
+
+<p><em>Score on training set:</em> 0.81</p>
+
+<p><em>Submission score:</em> 0.77512
+ :((((</p>
+
+<h3>Iteration 14</h3>
+
+<p>This is a come back to classification tree.
+I wanted to check if i can improve things by fitting womrn and men separately with the family column included.</p>
+
+<hr/>
+
+<h3>Ideas</h3>
+
+<ul>
+<li>Improve age with pclass!</li>
+<li>model the age based on both training and testing sets.</li>
+<li>I wonder if SVM would improve the classification with some vertical boundaries.</li>
+</ul>
+
+</body>
+
+</html>
+
